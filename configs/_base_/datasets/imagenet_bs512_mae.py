@@ -28,5 +28,5 @@ train_dataloader = dict(
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
-        split='train',
+        # split='train',
         pipeline=train_pipeline))

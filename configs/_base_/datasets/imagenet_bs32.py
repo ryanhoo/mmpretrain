@@ -1,7 +1,7 @@
 # dataset settings
-dataset_type = 'ImageNet'
+dataset_type = 'CustomDataset'
 data_preprocessor = dict(
-    num_classes=1000,
+    num_classes=27,
     # RGB format normalization parameters
     mean=[123.675, 116.28, 103.53],
     std=[58.395, 57.12, 57.375],
@@ -11,7 +11,7 @@ data_preprocessor = dict(
 
 train_pipeline = [
     dict(type='LoadImageFromFile'),
-    dict(type='RandomResizedCrop', scale=224),
+    dict(type='RandomResizedCrop', scale=480),
     dict(type='RandomFlip', prob=0.5, direction='horizontal'),
     dict(type='PackInputs'),
 ]
@@ -19,28 +19,28 @@ train_pipeline = [
 test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='ResizeEdge', scale=256, edge='short'),
-    dict(type='CenterCrop', crop_size=224),
+    dict(type='CenterCrop', crop_size=480),
     dict(type='PackInputs'),
 ]
 
 train_dataloader = dict(
-    batch_size=32,
+    batch_size=64,
     num_workers=5,
     dataset=dict(
         type=dataset_type,
-        data_root='data/imagenet',
-        split='train',
+        data_root='data/birds',
+        # split='train',
         pipeline=train_pipeline),
     sampler=dict(type='DefaultSampler', shuffle=True),
 )
 
 val_dataloader = dict(
-    batch_size=32,
+    batch_size=64,
     num_workers=5,
     dataset=dict(
         type=dataset_type,
-        data_root='data/imagenet',
-        split='val',
+        data_root='data/birds_val',
+        # split='val',
         pipeline=test_pipeline),
     sampler=dict(type='DefaultSampler', shuffle=False),
 )
