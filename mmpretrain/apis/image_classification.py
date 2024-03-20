@@ -187,6 +187,28 @@ class ImageClassificationInferencer(BaseInferencer):
             self.visualizer.close()
         return visualization
 
+    # def postprocess(self,
+    #                 preds: List[DataSample],
+    #                 visualization: List[np.ndarray],
+    #                 return_datasamples=False) -> dict:
+    #     if return_datasamples:
+    #         return preds
+
+    #     results = []
+    #     for data_sample in preds:
+    #         pred_scores = data_sample.pred_score
+    #         pred_score = float(torch.max(pred_scores).item())
+    #         pred_label = torch.argmax(pred_scores).item()
+    #         result = {
+    #             'pred_scores': pred_scores.detach().cpu().numpy(),
+    #             'pred_label': pred_label,
+    #             'pred_score': pred_score,
+    #         }
+    #         if self.classes is not None:
+    #             result['pred_class'] = self.classes[pred_label]
+    #         results.append(result)
+
+    #     return results
     def postprocess(self,
                     preds: List[DataSample],
                     visualization: List[np.ndarray],
@@ -197,19 +219,30 @@ class ImageClassificationInferencer(BaseInferencer):
         results = []
         for data_sample in preds:
             pred_scores = data_sample.pred_score
-            pred_score = float(torch.max(pred_scores).item())
-            pred_label = torch.argmax(pred_scores).item()
+            top_scores, top_indices = torch.topk(pred_scores, 5)  # 获取前5个最高分数及其索引
+            top_scores = top_scores.detach().cpu().numpy()
+            top_indices = top_indices.detach().cpu().numpy()
+
+            top_labels_scores = []
+            for score, index in zip(top_scores, top_indices):
+                top_labels_scores.append({
+                    'pred_label': index,
+                    'pred_score': float(score)
+                })
+
             result = {
-                'pred_scores': pred_scores.detach().cpu().numpy(),
-                'pred_label': pred_label,
-                'pred_score': pred_score,
+                'top_labels_scores': top_labels_scores,
+                'all_scores': pred_scores.detach().cpu().numpy(),  # 保留所有分数
             }
+
             if self.classes is not None:
-                result['pred_class'] = self.classes[pred_label]
+                result['top_classes_scores'] = [
+                    {'pred_class': self.classes[label], 'pred_score': score}
+                    for label, score in zip(top_indices, top_scores)
+                ]
             results.append(result)
 
         return results
-
     @staticmethod
     def list_models(pattern: Optional[str] = None):
         """List all available model names.

@@ -1,8 +1,8 @@
-data_root = 'data/birds_1369/train'
-data_root_val = 'data/birds_1369/val'
-work_dir = './work_dirs/efficientnetv2_s_2nd'
+data_root = 'data/birds_1451/train'
+data_root_val = 'data/birds_1451/val'
+work_dir = './work_dirs/efficientnetv2_s_3nd'
 image_size = 384
-num_classes=1395
+num_classes=1451
 batch_size=32
 max_epochs = 100
 

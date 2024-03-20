@@ -36,7 +36,8 @@ def main():
         )
     result = inferencer(args.img, show=args.show, show_dir=args.show_dir)[0]
     # show the results
-    result.pop('pred_scores')  # pred_scores is too verbose for a demo.
+    result.pop('all_scores')  # pred_scores is too verbose for a demo.
+    result.pop('top_labels_scores')  # pred_scores is too verbose for a demo.
     print_json(dump(result, file_format='json', indent=4))
 
 
