@@ -1,7 +1,7 @@
 import torch
 
 # model_path = '/data1/docker-lab/TF/mj/mix_cls_471700.pth'
-model_path = 'work_dirs/efficientnetv2_s_3nd/epoch_2.pth'
+model_path = '../work_dirs/convnext_v2_n/epoch_13.pth'
 # 加载权重文件
 checkpoint = torch.load(model_path)
 

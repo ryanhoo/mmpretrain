@@ -61,7 +61,7 @@ param_scheduler = dict(
         90,
     ], type='MultiStepLR')
 randomness = dict(deterministic=False, seed=None)
-resume = False
+resume = True
 test_cfg = dict()
 test_dataloader = dict(
     batch_size=batch_size,
