@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YOLO Dataset Grid Preview with Pagination</title>
+    <style>
+      #image-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 10px;
+        margin: 20px;
+      }
+      .image-container {
+        position: relative;
+        width: 140px;
+        height: 140px;
+        background-color: rgba(0, 0, 0, 0.08);
+      }
+      .image-container img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+      .bbox {
+        position: absolute;
+        border: 2px solid red;
+        pointer-events: none;
+      }
+      .label {
+        background: red;
+        color: black;
+        font-size: 10px;
+        padding: 2px;
+        position: absolute;
+      }
+      #pagination {
+        margin-top: 20px;
+        text-align: center;
+      }
+
+      /* Modal styles */
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.9);
+      }
+
+      .modal-content {
+        margin: 10% auto;
+        width: 80%;
+      }
+
+      .modal-image-container {
+        position: relative;
+      }
+
+      .close {
+        color: #fff;
+        position: absolute;
+        top: 15px;
+        right: 35px;
+        font-size: 40px;
+        font-weight: bold;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="image-grid"></div>
+
+    <div id="pagination">
+      <button id="prev" disabled>Previous</button>
+      <span id="page-info"></span>
+      <button id="next" disabled>Next</button>
+    </div>
+    <!-- Modal for image preview -->
+    <div id="modal" class="modal">
+      <span class="close">&times;</span>
+      <div class="modal-content">
+        <div class="modal-image-container">
+          <img id="modal-image" src="" alt="Image preview" />
+        </div>
+      </div>
+    </div>
+    <script>
+      const classesLabels = [
+        // coco-2017
+        // 'person',
+        // 'bird',
+
+        // inat-2017
+        "bird",
+        "insect",
+        "mammal",
+        "reptile",
+        "amphibia",
+        "spider",
+      ];
+      const colors = [
+        "cyan",
+        "#F4E869",
+        "#00FCCD",
+        "#F5FCCD",
+        "yellow",
+        "#FACBEA",
+      ];
+      const task = "train";
+
+      // Configuration
+      const itemsPerPage = 60; // Set the number of items per page
+
+      let currentPage = 40;
+      let totalPages = 0;
+      let imageFiles = [];
+
+      // Fetch the list of image files from the server
+      function fetchImageList() {
+        fetch(`/api/${task}/images`)
+          .then((response) => response.json())
+          .then((files) => {
+            imageFiles = files;
+            totalPages = Math.ceil(imageFiles.length / itemsPerPage);
+            updatePaginationInfo();
+            loadImagesForCurrentPage(currentPage);
+          })
+          .catch((error) => {
+            console.error("Error fetching image list:", error);
+          });
+      }
+
+      // Load images for the current page
+      function loadImagesForCurrentPage(page) {
+        const grid = document.getElementById("image-grid");
+        grid.innerHTML = ""; // Clear the grid
+
+        const pageStart = (page - 1) * itemsPerPage;
+        const pageEnd = pageStart + itemsPerPage;
+        const pageImages = imageFiles.slice(pageStart, pageEnd);
+
+        pageImages.forEach((imageName) => {
+          const imagePath = `${task}/images/${imageName}`;
+          const labelPath = `/api/${task}/labels/${imageName}`;
+
+          const imageContainer = document.createElement("div");
+          imageContainer.className = "image-container";
+          const img = document.createElement("img");
+          img.src = imagePath;
+          img.alt = "Image to annotate";
+          img.onload = () => {
+            fetch(labelPath)
+              .then((response) => response.text())
+              .then((text) => {
+                const annotations = text.trim().split("\n");
+                drawBoxes(annotations, imageContainer, img);
+
+                img.onclick = () => {
+                  openModal(imagePath, annotations);
+                };
+              })
+              .catch((error) => {
+                console.error("Error fetching annotations:", error);
+              });
+          };
+          imageContainer.appendChild(img);
+          grid.appendChild(imageContainer);
+        });
+      }
+
+      // Function to draw bounding boxes
+      function drawBoxes(annotations, container, image) {
+        annotations.forEach((annotation) => {
+          const [cls, centerX, centerY, width, height] = annotation
+            .split(" ")
+            .map(parseFloat);
+          const box = document.createElement("div");
+          const label = document.createElement("div");
+
+          // Convert YOLO format to pixel values
+          const rectWidth = width * image.width;
+          const rectHeight = height * image.height;
+          const rectX = centerX * image.width - rectWidth / 2;
+          const rectY = centerY * image.height - rectHeight / 2;
+
+          // Set bounding box styles
+          box.className = "bbox";
+          box.style.left = `${rectX}px`;
+          box.style.top = `${rectY}px`;
+          box.style.width = `${rectWidth}px`;
+          box.style.height = `${rectHeight}px`;
+          box.style.borderColor = colors[cls];
+
+          // Set label styles and content
+          label.className = "label";
+          label.style.left = `${rectX}px`;
+          label.style.top = `${rectY - 15}px`; // Position label above the box
+          label.style.backgroundColor = colors[cls];
+          label.textContent = classesLabels[cls];
+
+          // Append bounding box and label to container
+          container.appendChild(box);
+          container.appendChild(label);
+        });
+      }
+
+      // Update pagination information
+      function updatePaginationInfo() {
+        document.getElementById(
+          "page-info"
+        ).textContent = `Page ${currentPage} of ${totalPages}`;
+        document.getElementById("prev").disabled = currentPage === 1;
+        document.getElementById("next").disabled = currentPage === totalPages;
+      }
+
+      // Function to open modal with large image preview
+      function openModal(imagePath, annotations) {
+        const modal = document.getElementById("modal");
+        const modalImg = document.getElementById("modal-image");
+        const modalImageContainer = document.querySelector(
+          ".modal-image-container"
+        );
+
+        // Clear previous annotations
+        modalImageContainer
+          .querySelectorAll(".bbox, .label")
+          .forEach((el) => el.remove());
+
+        // Set image source and display modal
+        modalImg.src = imagePath;
+        modal.style.display = "block";
+
+        // Draw annotations on modal image
+        modalImg.onload = () => {
+          drawBoxes(annotations, modalImageContainer, modalImg);
+        };
+      }
+
+      function closeModal() {
+        document.getElementById("modal").style.display = "none";
+      }
+
+      // Event listener for closing the modal with the close button
+      document.querySelector(".close").addEventListener("click", closeModal);
+
+      // Event listener for closing the modal with the ESC key
+      document.addEventListener("keydown", function (event) {
+        if (event.keyCode === 27) {
+          // 27 is the key code for the ESC key
+          closeModal();
+        }
+      });
+
+      // Event listeners for pagination buttons
+      document.getElementById("prev").addEventListener("click", () => {
+        if (currentPage > 1) {
+          currentPage--;
+          loadImagesForCurrentPage(currentPage);
+          updatePaginationInfo();
+        }
+      });
+
+      document.getElementById("next").addEventListener("click", () => {
+        if (currentPage < totalPages) {
+          currentPage++;
+          loadImagesForCurrentPage(currentPage);
+          updatePaginationInfo();
+        }
+      });
+
+      // Initialize
+      fetchImageList();
+    </script>
+  </body>
+</html>
